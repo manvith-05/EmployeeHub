@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Employee Management Dashboard</title>  
+
+  <style>
+        body {
+            margin: 0;
+            font-family: Arial, sans-serif;
+            background: #f4f6f9;
+        }
+
+        .header {
+            background: #667eea;
+            color: white;
+            padding: 25px;
+            text-align: center;
+        }
+
+        .container {
+            width: 90%;
+            max-width: 1000px;
+            margin: 40px auto;
+        }
+
+        h2 {
+            text-align: center;
+            color: #333;
+        }
+
+        .cards {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 25px;
+            margin-top: 30px;
+        }
+
+        .card {
+            background: white;
+            padding: 30px;
+            border-radius: 15px;
+            text-align: center;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+        }
+
+        .card h3 {
+            color: #667eea;
+        }
+
+        button {
+            padding: 12px 25px;
+            border: none;
+            border-radius: 8px;
+            background: #667eea;
+            color: white;
+            cursor: pointer;
+        }
+
+        .logout {
+            background: #e74c3c;
+        }
+
+        @media (max-width: 700px) {
+            .cards {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+
+<body>
+
+<div class="header">
+    <h1>Employee Management System</h1>
+    <p>Admin Dashboard</p>
+</div>
+
+<div class="container">
+
+    <h2>Welcome, Admin</h2>
+
+    <div class="cards">
+
+        <div class="card">
+            <h3>👨‍💼 Employees</h3>
+            <p>Manage employee records</p>
+            <button onclick="openEmployees()">
+                Manage Employees
+            </button>
+        </div>
+
+        <div class="card">
+            <h3>🏢 Departments</h3>
+            <p>Manage departments</p>
+            <button onclick="openDepartments()">
+                Manage Departments
+            </button>
+        </div>
+
+        <div class="card">
+            <h3>💰 Salary</h3>
+            <p>Manage salary details</p>
+            <button onclick="openSalary()">
+                Salary Management
+            </button>
+        </div>
+
+        <div class="card">
+            <h3>🚪 Logout</h3>
+            <p>Exit admin account</p>
+            <button class="logout" onclick="logout()">
+                Logout
+            </button>
+        </div>
+
+    </div>
+
+</div>
+
+<script>
+
+function openEmployees() {
+    window.location.href = "/employees.html";
+}
+
+function openDepartments() {
+    window.location.href = "/departments.html";
+}
+
+function openSalary() {
+    window.location.href = "/salary.html";
+}
+
+function logout() {
+    sessionStorage.clear();
+    window.location.href = "/login.html";
+}
+
+</script>
+
+</body>
+</html>

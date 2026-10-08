@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+
+<html lang="en"> \<head>     \<meta charset="UTF-8">     \<meta name="viewport" content="width=device-width, initial-scale=1.0">     \<title>EmployeeHub - Admin Login\</title>
+
+<style>
+    body {
+        margin: 0;
+        font-family: Arial, sans-serif;
+        background: linear-gradient(135deg, #667eea, #764ba2);
+        height: 100vh;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+    }
+
+    .login-box {
+        background: white;
+        width: 350px;
+        padding: 40px;
+        border-radius: 15px;
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+        text-align: center;
+    }
+
+    .logo {
+        font-size: 32px;
+        font-weight: bold;
+        color: #667eea;
+        margin-bottom: 8px;
+    }
+
+    .subtitle {
+        color: #666;
+        margin-bottom: 25px;
+        font-size: 15px;
+    }
+
+    input {
+        width: 100%;
+        padding: 12px;
+        margin: 10px 0;
+        border: 1px solid #ccc;
+        border-radius: 8px;
+        box-sizing: border-box;
+        font-size: 14px;
+    }
+
+    input:focus {
+        outline: none;
+        border-color: #667eea;
+    }
+
+    button {
+        width: 100%;
+        padding: 12px;
+        margin-top: 15px;
+        border: none;
+        border-radius: 8px;
+        background: #667eea;
+        color: white;
+        font-size: 16px;
+        cursor: pointer;
+    }
+
+    button:hover {
+        background: #5568d8;
+    }
+
+    #message {
+        margin-top: 15px;
+        font-weight: bold;
+    }
+</style>
+
+</head>
+
+<body>
+
+<div class="login-box">
+
+    <div class="logo">EmployeeHub</div>
+
+    <div class="subtitle">Employee Management System</div>
+
+    <input type="text" id="username" placeholder="Enter username">
+
+    <input type="password" id="password" placeholder="Enter password">
+
+    <button onclick="login()">Login</button>
+
+    <div id="message"></div>
+
+</div>
+
+<script>
+    function login() {
+
+        const username = document.getElementById("username").value;
+        const password = document.getElementById("password").value;
+
+        fetch("/api/auth/login", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify({
+                username: username,
+                password: password
+            })
+        })
+        .then(response => {
+
+            if (!response.ok) {
+                throw new Error("Login failed");
+            }
+
+            return response.text();
+        })
+        .then(data => {
+
+            sessionStorage.setItem("username", username);
+            sessionStorage.setItem("password", password);
+
+            document.getElementById("message").innerHTML =
+                "Login successful!";
+
+            setTimeout(() => {
+                window.location.href = "dashboard.html";
+            }, 1000);
+        })
+        .catch(error => {
+
+            document.getElementById("message").innerHTML =
+                "Invalid username or password";
+        });
+    }
+</script>
+
+</body> </html>
