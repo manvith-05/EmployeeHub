@@ -52,8 +52,7 @@ public class SecurityConfig {
                     "/api/auth/**"
                 ).permitAll()
                 .anyRequest().authenticated()
-            )
-            .httpBasic(httpBasic -> {});
+            );
 
         return http.build();
     }
