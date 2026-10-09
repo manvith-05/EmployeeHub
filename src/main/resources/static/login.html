@@ -100,6 +100,7 @@
 
         fetch("/api/auth/login", {
             method: "POST",
+            credentials: "same-origin",
             headers: {
                 "Content-Type": "application/json"
             },
@@ -118,9 +119,7 @@
         })
         .then(data => {
 
-            sessionStorage.setItem("username", username);
-            sessionStorage.setItem("password", password);
-
+           
             document.getElementById("message").innerHTML =
                 "Login successful!";
 
