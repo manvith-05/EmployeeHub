@@ -21,17 +21,16 @@ public class AuthController {
 
     private final UserService userService;
     private final AuthenticationManager authenticationManager;
-    private final SecurityContextRepository securityContextRepository =
-            new HttpSessionSecurityContextRepository();
-
+    private final SecurityContextRepository securityContextRepository;
     public AuthController(
-            UserService userService,
-            AuthenticationConfiguration configuration) throws Exception {
+        UserService userService,
+        AuthenticationConfiguration configuration,
+        SecurityContextRepository securityContextRepository) throws Exception {
 
-        this.userService = userService;
-        this.authenticationManager =
-                configuration.getAuthenticationManager();
-    }
+    this.userService = userService;
+    this.authenticationManager = configuration.getAuthenticationManager();
+    this.securityContextRepository = securityContextRepository;
+}
 
     @PostMapping("/register")
     public String register(@RequestBody User user) {

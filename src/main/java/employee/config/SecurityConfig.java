@@ -1,4 +1,3 @@
-
 package employee.config;
 
 import employee.entity.User;
@@ -11,6 +10,9 @@ import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.config.http.SessionCreationPolicy;
+import org.springframework.security.web.context.HttpSessionSecurityContextRepository;
+import org.springframework.security.web.context.SecurityContextRepository;
 
 @Configuration
 public class SecurityConfig {
@@ -21,13 +23,15 @@ public class SecurityConfig {
     }
 
     @Bean
-    public UserDetailsService userDetailsService(
-            UserRepository userRepository) {
+    public SecurityContextRepository securityContextRepository() {
+        return new HttpSessionSecurityContextRepository();
+    }
 
+    @Bean
+    public UserDetailsService userDetailsService(UserRepository userRepository) {
         return username -> {
             User user = userRepository.findByUsername(username)
-                    .orElseThrow(() ->
-                            new UsernameNotFoundException("User not found"));
+                    .orElseThrow(() -> new UsernameNotFoundException("User not found"));
 
             String role = user.getRole();
 
@@ -44,36 +48,30 @@ public class SecurityConfig {
     }
 
     @Bean
-    public SecurityFilterChain securityFilterChain(HttpSecurity http)
-            throws Exception {
+    public SecurityFilterChain securityFilterChain(
+            HttpSecurity http,
+            SecurityContextRepository securityContextRepository) throws Exception {
 
         http
             .csrf(csrf -> csrf.disable())
+            .securityContext(context -> context
+                    .securityContextRepository(securityContextRepository))
+            .sessionManagement(session -> session
+                    .sessionCreationPolicy(SessionCreationPolicy.IF_REQUIRED))
             .authorizeHttpRequests(auth -> auth
                 .requestMatchers(
-                    "/",
-                    "/index.html",
-                    "/login.html",
-                    "/register.html",
-                    "/style.css",
-                    "/css/**",
-                    "/js/**",
-                    "/images/**",
-                    "/api/auth/**",
-                    "/error"
+                    "/", "/index.html", "/login.html", "/register.html",
+                    "/style.css", "/css/**", "/js/**", "/images/**",
+                    "/api/auth/**", "/error"
                 ).permitAll()
                 .requestMatchers(
-                    "/api/employees/**",
-                    "/api/departments/**",
-                    "/api/salary/**",
-                    "/api/salaries/**"
+                    "/dashboard.html", "/employees.html",
+                    "/departments.html", "/salary.html"
                 ).hasRole("ADMIN")
                 .requestMatchers(
-                    "/dashboard.html",
-                    "/employees.html",
-                    "/departments.html",
-                    "/salary.html"
-                ).authenticated()
+                    "/api/employees/**", "/api/departments/**",
+                    "/api/salary/**", "/api/salaries/**"
+                ).hasRole("ADMIN")
                 .anyRequest().authenticated()
             );
 
