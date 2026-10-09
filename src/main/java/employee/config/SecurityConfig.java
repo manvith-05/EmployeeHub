@@ -34,26 +34,31 @@ public class SecurityConfig {
         };
     }
 
-    @Bean
-    public SecurityFilterChain securityFilterChain(HttpSecurity http)
-            throws Exception {
+@Bean
+public SecurityFilterChain securityFilterChain(HttpSecurity http)
+        throws Exception {
 
-        http
-            .csrf(csrf -> csrf.disable())
-            .authorizeHttpRequests(auth -> auth
-                .requestMatchers(
-                    "/",
-                    "/login.html",
-                    "/dashboard.html",
-                    "/employees.html",
-                    "/departments.html",
-                    "/salary.html",
-                    "/style.css",
-                    "/api/auth/**"
-                ).permitAll()
-                .anyRequest().authenticated()
-            );
+    http
+        .csrf(csrf -> csrf.disable())
+        .authorizeHttpRequests(auth -> auth
+            .requestMatchers(
+                "/",
+                "/index.html",
+                "/login.html",
+                "/dashboard.html",
+                "/employees.html",
+                "/departments.html",
+                "/salary.html",
+                "/style.css",
+                "/css/**",
+                "/js/**",
+                "/images/**",
+                "/api/auth/**",
+                "/error"
+            ).permitAll()
+            .anyRequest().authenticated()
+        );
 
-        return http.build();
-    }
+    return http.build();
+}
 }
