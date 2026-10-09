@@ -121,7 +121,6 @@
 </div>
 
 <script>
-
 function openEmployees() {
     window.location.href = "/employees.html";
 }
@@ -135,10 +134,15 @@ function openSalary() {
 }
 
 function logout() {
-    sessionStorage.clear();
-    window.location.href = "/login.html";
+    fetch("/api/auth/logout", {
+        method: "POST",
+        credentials: "same-origin"
+    })
+    .finally(() => {
+        sessionStorage.clear();
+        window.location.href = "/login.html";
+    });
 }
-
 </script>
 
 </body>
