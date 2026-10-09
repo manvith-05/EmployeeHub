@@ -1,0 +1,91 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>EmployeeHub - Register</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            height: 100vh;
+            margin: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+        .box {
+            background: white;
+            width: 320px;
+            padding: 30px;
+            border-radius: 12px;
+            text-align: center;
+        }
+        input, button {
+            width: 100%;
+            padding: 12px;
+            margin-top: 12px;
+            box-sizing: border-box;
+        }
+        button {
+            background: #667eea;
+            color: white;
+            border: none;
+            cursor: pointer;
+        }
+        #message {
+            margin-top: 15px;
+        }
+    </style>
+</head>
+<body>
+    <div class="box">
+        <h2>EmployeeHub</h2>
+        <h3>Create Account</h3>
+
+        <form id="registerForm">
+            <input id="username" type="text"
+                   placeholder="Choose username" required>
+            <input id="password" type="password"
+                   placeholder="Choose password" minlength="8" required>
+            <button type="submit">Register</button>
+        </form>
+
+        <p id="message"></p>
+        <a href="login.html">Already have an account? Login</a>
+    </div>
+
+    <script>
+        document.getElementById("registerForm").addEventListener("submit", async function(event) {
+            event.preventDefault();
+
+            const message = document.getElementById("message");
+            message.textContent = "Registering...";
+
+            try {
+                const response = await fetch("/api/auth/register", {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json"
+                    },
+                    body: JSON.stringify({
+                        username: document.getElementById("username").value.trim(),
+                        password: document.getElementById("password").value
+                    })
+                });
+
+                const result = await response.text();
+
+                if (response.ok) {
+                    message.textContent = "Registration successful! You can now log in.";
+                } else {
+                    message.textContent = "Registration failed: " + result;
+                }
+            } catch (error) {
+                message.textContent = "Unable to connect. Please try again.";
+            }
+        });
+    </script>
+</body>
+</html>

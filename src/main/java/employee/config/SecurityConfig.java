@@ -1,3 +1,4 @@
+
 package employee.config;
 
 import employee.entity.User;
@@ -22,9 +23,9 @@ public class SecurityConfig {
     @Bean
     public UserDetailsService userDetailsService(UserRepository userRepository) {
         return username -> {
-
             User user = userRepository.findByUsername(username)
-                    .orElseThrow(() -> new UsernameNotFoundException("User not found"));
+                    .orElseThrow(() ->
+                            new UsernameNotFoundException("User not found"));
 
             return org.springframework.security.core.userdetails.User
                     .withUsername(user.getUsername())
@@ -34,31 +35,32 @@ public class SecurityConfig {
         };
     }
 
-@Bean
-public SecurityFilterChain securityFilterChain(HttpSecurity http)
-        throws Exception {
+    @Bean
+    public SecurityFilterChain securityFilterChain(HttpSecurity http)
+            throws Exception {
 
-    http
-        .csrf(csrf -> csrf.disable())
-        .authorizeHttpRequests(auth -> auth
-            .requestMatchers(
-                "/",
-                "/index.html",
-                "/login.html",
-                "/dashboard.html",
-                "/employees.html",
-                "/departments.html",
-                "/salary.html",
-                "/style.css",
-                "/css/**",
-                "/js/**",
-                "/images/**",
-                "/api/auth/**",
-                "/error"
-            ).permitAll()
-            .anyRequest().authenticated()
-        );
+        http
+            .csrf(csrf -> csrf.disable())
+            .authorizeHttpRequests(auth -> auth
+                .requestMatchers(
+                    "/",
+                    "/index.html",
+                    "/login.html",
+                    "/register.html",
+                    "/dashboard.html",
+                    "/employees.html",
+                    "/departments.html",
+                    "/salary.html",
+                    "/style.css",
+                    "/css/**",
+                    "/js/**",
+                    "/images/**",
+                    "/api/auth/**",
+                    "/error"
+                ).permitAll()
+                .anyRequest().authenticated()
+            );
 
-    return http.build();
-}
+        return http.build();
+    }
 }
