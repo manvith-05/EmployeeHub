@@ -21,16 +21,24 @@ public class SecurityConfig {
     }
 
     @Bean
-    public UserDetailsService userDetailsService(UserRepository userRepository) {
+    public UserDetailsService userDetailsService(
+            UserRepository userRepository) {
+
         return username -> {
             User user = userRepository.findByUsername(username)
                     .orElseThrow(() ->
                             new UsernameNotFoundException("User not found"));
 
+            String role = user.getRole();
+
+            if (role == null || role.isBlank()) {
+                role = "USER";
+            }
+
             return org.springframework.security.core.userdetails.User
                     .withUsername(user.getUsername())
                     .password(user.getPassword())
-                    .roles("ADMIN")
+                    .roles(role)
                     .build();
         };
     }
@@ -47,10 +55,6 @@ public class SecurityConfig {
                     "/index.html",
                     "/login.html",
                     "/register.html",
-                    "/dashboard.html",
-                    "/employees.html",
-                    "/departments.html",
-                    "/salary.html",
                     "/style.css",
                     "/css/**",
                     "/js/**",
@@ -58,6 +62,18 @@ public class SecurityConfig {
                     "/api/auth/**",
                     "/error"
                 ).permitAll()
+                .requestMatchers(
+                    "/api/employees/**",
+                    "/api/departments/**",
+                    "/api/salary/**",
+                    "/api/salaries/**"
+                ).hasRole("ADMIN")
+                .requestMatchers(
+                    "/dashboard.html",
+                    "/employees.html",
+                    "/departments.html",
+                    "/salary.html"
+                ).authenticated()
                 .anyRequest().authenticated()
             );
 

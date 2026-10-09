@@ -1,3 +1,4 @@
+
 package employee.service;
 
 import employee.entity.User;
@@ -19,6 +20,8 @@ public class UserService {
     }
 
     public User register(User user) {
+        user.setId(null);
+        user.setRole("USER");
         user.setPassword(passwordEncoder.encode(user.getPassword()));
         return repository.save(user);
     }
