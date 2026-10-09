@@ -1,7 +1,9 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-    <title>Employee Management</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Employee Management - EmployeeHub</title>
 
     <style>
         body {
@@ -23,13 +25,12 @@
             margin: 30px auto;
         }
 
-        .form-card,
-        .table-card {
+        .form-card, .table-card {
             background: white;
             padding: 25px;
             margin-bottom: 25px;
             border-radius: 12px;
-            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
         }
 
         .form-grid {
@@ -42,6 +43,8 @@
             padding: 12px;
             border: 1px solid #ccc;
             border-radius: 6px;
+            box-sizing: border-box;
+            width: 100%;
         }
 
         button {
@@ -51,7 +54,11 @@
             background: #667eea;
             color: white;
             cursor: pointer;
-            margin-top: 15px;
+            margin: 10px 5px 0 0;
+        }
+
+        button:hover {
+            opacity: 0.9;
         }
 
         .delete {
@@ -64,12 +71,20 @@
 
         .dashboard {
             background: #333;
-            margin-left: 10px;
+        }
+
+        .logout {
+            background: #e74c3c;
+        }
+
+        .table-wrapper {
+            overflow-x: auto;
         }
 
         table {
             width: 100%;
             border-collapse: collapse;
+            min-width: 800px;
         }
 
         th {
@@ -84,7 +99,12 @@
             border-bottom: 1px solid #ddd;
         }
 
-        @media(max-width:700px) {
+        #message {
+            font-weight: bold;
+            margin-top: 15px;
+        }
+
+        @media (max-width: 700px) {
             .form-grid {
                 grid-template-columns: 1fr;
             }
@@ -95,235 +115,264 @@
 <body>
 
 <div class="header">
-    <h1>👨‍💼 Employee Management</h1>
+    <h1>EmployeeHub</h1>
+    <h2>Employee Management</h2>
 </div>
 
 <div class="container">
 
     <div class="form-card">
-
         <h2 id="title">Add Employee</h2>
 
         <div class="form-grid">
-
-            <input id="name" placeholder="Employee Name">
-
-            <input id="email" placeholder="Email">
-
-            <input id="phone" placeholder="Phone">
-
-            <input id="address" placeholder="Address">
-
-            <input id="department" placeholder="Department">
-
-            <input id="salary" type="number" placeholder="Salary">
-
+            <input id="name" placeholder="Employee Name" required>
+            <input id="email" type="email" placeholder="Email" required>
+            <input id="phone" placeholder="Phone" required>
+            <input id="address" placeholder="Address" required>
+            <input id="department" placeholder="Department" required>
+            <input id="salary" type="number" min="0" placeholder="Salary" required>
         </div>
 
         <button onclick="saveEmployee()">Save Employee</button>
-
         <button onclick="clearForm()">Clear</button>
-
         <button class="dashboard"
                 onclick="window.location.href='/dashboard.html'">
             Dashboard
         </button>
+        <button class="logout" onclick="logout()">Logout</button>
 
         <p id="message"></p>
-
     </div>
 
     <div class="table-card">
-
         <h2>Employee List</h2>
 
-        <table>
-
-            <thead>
-                <tr>
-                    <th>ID</th>
-                    <th>Name</th>
-                    <th>Email</th>
-                    <th>Phone</th>
-                    <th>Address</th>
-                    <th>Department</th>
-                    <th>Salary</th>
-                    <th>Actions</th>
-                </tr>
-            </thead>
-
-            <tbody id="employeeTable"></tbody>
-
-        </table>
-
+        <div class="table-wrapper">
+            <table>
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Name</th>
+                        <th>Email</th>
+                        <th>Phone</th>
+                        <th>Address</th>
+                        <th>Department</th>
+                        <th>Salary</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody id="employeeTable"></tbody>
+            </table>
+        </div>
     </div>
 
 </div>
 
 <script>
+    let editId = null;
 
-let editId = null;
-
-const username = sessionStorage.getItem("username");
-const password = sessionStorage.getItem("password");
-
-if (!username || !password) {
-    window.location.href = "/login.html";
-}
-
-const auth = "Basic " + btoa(username + ":" + password);
-
-function loadEmployees() {
-
-    fetch("/api/employees", {
-        headers: {
-            "Authorization": auth
-        }
-    })
-    .then(response => response.json())
-    .then(data => {
-
-        const table = document.getElementById("employeeTable");
-
-        table.innerHTML = "";
-
-        data.forEach(employee => {
-
-            table.innerHTML += `
-                <tr>
-                    <td>${employee.id}</td>
-                    <td>${employee.name}</td>
-                    <td>${employee.email}</td>
-                    <td>${employee.phone}</td>
-                    <td>${employee.address}</td>
-                    <td>${employee.department}</td>
-                    <td>₹${employee.salary}</td>
-                    <td>
-                        <button class="edit"
-                            onclick="editEmployee(${employee.id})">
-                            Edit
-                        </button>
-
-                        <button class="delete"
-                            onclick="deleteEmployee(${employee.id})">
-                            Delete
-                        </button>
-                    </td>
-                </tr>
-            `;
+    async function apiRequest(url, options = {}) {
+        const response = await fetch(url, {
+            ...options,
+            credentials: "same-origin",
+            headers: {
+                ...(options.headers || {})
+            }
         });
-    })
-    .catch(() => {
-        document.getElementById("message").innerText =
-            "Failed to load employees";
-    });
-}
 
-function saveEmployee() {
+        if (response.status === 401 || response.status === 403) {
+            document.getElementById("message").innerText =
+                "Access denied. Please log in with an admin account.";
+            throw new Error("Authentication or authorization failed");
+        }
 
-    const employee = {
-        name: document.getElementById("name").value,
-        email: document.getElementById("email").value,
-        phone: document.getElementById("phone").value,
-        address: document.getElementById("address").value,
-        department: document.getElementById("department").value,
-        salary: Number(document.getElementById("salary").value)
-    };
+        if (!response.ok) {
+            throw new Error("Request failed: " + response.status);
+        }
 
-    let url = "/api/employees";
-    let method = "POST";
-
-    if (editId !== null) {
-        url = "/api/employees/" + editId;
-        method = "PUT";
+        return response;
     }
 
-    fetch(url, {
-        method: method,
-        headers: {
-            "Authorization": auth,
-            "Content-Type": "application/json"
-        },
-        body: JSON.stringify(employee)
-    })
-    .then(response => response.json())
-    .then(() => {
+    async function loadEmployees() {
+        const table = document.getElementById("employeeTable");
+        const message = document.getElementById("message");
 
-        document.getElementById("message").innerText =
-            "Employee saved successfully";
+        try {
+            const response = await apiRequest("/api/employees");
+            const employees = await response.json();
 
-        clearForm();
-        loadEmployees();
-    })
-    .catch(() => {
+            table.innerHTML = "";
 
-        document.getElementById("message").innerText =
-            "Failed to save employee";
-    });
-}
+            employees.forEach(employee => {
+                const row = document.createElement("tr");
 
-function editEmployee(id) {
+                [
+                    employee.id,
+                    employee.name,
+                    employee.email,
+                    employee.phone,
+                    employee.address,
+                    employee.department,
+                    "₹" + employee.salary
+                ].forEach(value => {
+                    const cell = document.createElement("td");
+                    cell.textContent = value ?? "";
+                    row.appendChild(cell);
+                });
 
-    fetch("/api/employees/" + id, {
-        headers: {
-            "Authorization": auth
+                const actions = document.createElement("td");
+
+                const editButton = document.createElement("button");
+                editButton.textContent = "Edit";
+                editButton.className = "edit";
+                editButton.onclick = () => editEmployee(employee.id);
+
+                const deleteButton = document.createElement("button");
+                deleteButton.textContent = "Delete";
+                deleteButton.className = "delete";
+                deleteButton.onclick = () => deleteEmployee(employee.id);
+
+                actions.appendChild(editButton);
+                actions.appendChild(deleteButton);
+                row.appendChild(actions);
+                table.appendChild(row);
+            });
+
+            message.textContent = employees.length === 0
+                ? "No employees found."
+                : "";
+
+        } catch (error) {
+            if (error.message !== "Authentication or authorization failed") {
+                message.textContent = "Failed to load employees. Please try again.";
+            }
         }
-    })
-    .then(response => response.json())
-    .then(employee => {
-
-        editId = employee.id;
-
-        document.getElementById("name").value = employee.name;
-        document.getElementById("email").value = employee.email;
-        document.getElementById("phone").value = employee.phone;
-        document.getElementById("address").value = employee.address;
-        document.getElementById("department").value = employee.department;
-        document.getElementById("salary").value = employee.salary;
-
-        document.getElementById("title").innerText =
-            "Update Employee";
-    });
-}
-
-function deleteEmployee(id) {
-
-    if (!confirm("Delete this employee?")) {
-        return;
     }
 
-    fetch("/api/employees/" + id, {
-        method: "DELETE",
-        headers: {
-            "Authorization": auth
+    async function saveEmployee() {
+        const message = document.getElementById("message");
+
+        const employee = {
+            name: document.getElementById("name").value.trim(),
+            email: document.getElementById("email").value.trim(),
+            phone: document.getElementById("phone").value.trim(),
+            address: document.getElementById("address").value.trim(),
+            department: document.getElementById("department").value.trim(),
+            salary: Number(document.getElementById("salary").value)
+        };
+
+        if (!employee.name || !employee.email || !employee.phone ||
+            !employee.address || !employee.department ||
+            document.getElementById("salary").value === "" ||
+            employee.salary < 0) {
+            message.textContent = "Please fill in all fields correctly.";
+            return;
         }
-    })
-    .then(response => response.text())
-    .then(message => {
 
-        document.getElementById("message").innerText = message;
+        const url = editId === null
+            ? "/api/employees"
+            : "/api/employees/" + editId;
 
-        loadEmployees();
-    });
-}
+        const method = editId === null ? "POST" : "PUT";
 
-function clearForm() {
+        try {
+            const response = await apiRequest(url, {
+                method: method,
+                headers: {
+                    "Content-Type": "application/json"
+                },
+                body: JSON.stringify(employee)
+            });
 
-    editId = null;
+            message.textContent = await response.text()
+                .then(text => text || "Employee saved successfully.");
 
-    document.getElementById("name").value = "";
-    document.getElementById("email").value = "";
-    document.getElementById("phone").value = "";
-    document.getElementById("address").value = "";
-    document.getElementById("department").value = "";
-    document.getElementById("salary").value = "";
+            clearForm();
+            await loadEmployees();
 
-    document.getElementById("title").innerText =
-        "Add Employee";
-}
+        } catch (error) {
+            if (error.message !== "Authentication or authorization failed") {
+                message.textContent = "Failed to save employee.";
+            }
+        }
+    }
 
-loadEmployees();
+    async function editEmployee(id) {
+        try {
+            const response = await apiRequest("/api/employees/" + id);
+            const employee = await response.json();
 
+            editId = employee.id;
+
+            document.getElementById("name").value = employee.name || "";
+            document.getElementById("email").value = employee.email || "";
+            document.getElementById("phone").value = employee.phone || "";
+            document.getElementById("address").value = employee.address || "";
+            document.getElementById("department").value = employee.department || "";
+            document.getElementById("salary").value = employee.salary ?? "";
+
+            document.getElementById("title").textContent = "Update Employee";
+            document.getElementById("message").textContent =
+                "Update the details and click Save Employee.";
+
+            window.scrollTo({ top: 0, behavior: "smooth" });
+
+        } catch (error) {
+            if (error.message !== "Authentication or authorization failed") {
+                document.getElementById("message").textContent =
+                    "Failed to load employee details.";
+            }
+        }
+    }
+
+    async function deleteEmployee(id) {
+        if (!confirm("Are you sure you want to delete this employee?")) {
+            return;
+        }
+
+        try {
+            await apiRequest("/api/employees/" + id, {
+                method: "DELETE"
+            });
+
+            document.getElementById("message").textContent =
+                "Employee deleted successfully.";
+
+            await loadEmployees();
+
+        } catch (error) {
+            if (error.message !== "Authentication or authorization failed") {
+                document.getElementById("message").textContent =
+                    "Failed to delete employee.";
+            }
+        }
+    }
+
+    function clearForm() {
+        editId = null;
+
+        document.getElementById("name").value = "";
+        document.getElementById("email").value = "";
+        document.getElementById("phone").value = "";
+        document.getElementById("address").value = "";
+        document.getElementById("department").value = "";
+        document.getElementById("salary").value = "";
+
+        document.getElementById("title").textContent = "Add Employee";
+    }
+
+    async function logout() {
+        try {
+            await fetch("/api/auth/logout", {
+                method: "POST",
+                credentials: "same-origin"
+            });
+        } finally {
+            window.location.href = "/login.html";
+        }
+    }
+
+    loadEmployees();
 </script>
 
 </body>
