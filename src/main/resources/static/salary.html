@@ -3,8 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Salary Management</title>
-
+    <title>Salary Management - EmployeeHub</title>
     <style>
         * {
             box-sizing: border-box;
@@ -25,10 +24,8 @@
             display: flex;
             justify-content: space-between;
             align-items: center;
-        }
-
-        .navbar h2 {
-            font-size: 24px;
+            flex-wrap: wrap;
+            gap: 12px;
         }
 
         .navbar a {
@@ -45,7 +42,7 @@
             margin: 30px auto;
         }
 
-        .form-card {
+        .form-card, .table-card {
             background: white;
             padding: 25px;
             border-radius: 12px;
@@ -53,7 +50,7 @@
             margin-bottom: 30px;
         }
 
-        .form-card h2 {
+        h2 {
             color: #1e3c72;
             margin-bottom: 20px;
         }
@@ -78,37 +75,39 @@
             border-radius: 6px;
             cursor: pointer;
             font-size: 15px;
+            margin-top: 20px;
+        }
+
+        button:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
         }
 
         .save-btn {
             background: #1e3c72;
             color: white;
-            margin-top: 20px;
         }
 
         .clear-btn {
             background: #777;
             color: white;
-            margin-top: 20px;
             margin-left: 10px;
         }
 
-        .table-card {
-            background: white;
-            padding: 25px;
-            border-radius: 12px;
-            box-shadow: 0 5px 20px rgba(0,0,0,0.1);
-            overflow-x: auto;
+        .logout-btn {
+            background: #c0392b;
+            color: white;
+            margin: 0;
         }
 
-        .table-card h2 {
-            color: #1e3c72;
-            margin-bottom: 20px;
+        .table-card {
+            overflow-x: auto;
         }
 
         table {
             width: 100%;
             border-collapse: collapse;
+            min-width: 750px;
         }
 
         th {
@@ -130,12 +129,13 @@
         .edit-btn {
             background: #ffa502;
             color: white;
-            margin-right: 5px;
+            margin: 4px;
         }
 
         .delete-btn {
             background: #ff4757;
             color: white;
+            margin: 4px;
         }
 
         .net {
@@ -146,6 +146,7 @@
         #message {
             margin-top: 15px;
             font-weight: bold;
+            white-space: pre-wrap;
         }
 
         @media (max-width: 700px) {
@@ -163,51 +164,35 @@
         }
     </style>
 </head>
-
 <body>
 
 <div class="navbar">
-    <h2>💰 Salary Management</h2>
-    <a href="dashboard.html">Dashboard</a>
+    <h2 style="color:white; margin:0;">EmployeeHub - Salary Management</h2>
+    <div>
+        <a href="/dashboard.html">Dashboard</a>
+        <button class="logout-btn" onclick="logout()">Logout</button>
+    </div>
 </div>
 
 <div class="container">
-
     <div class="form-card">
-
         <h2 id="formTitle">Add Salary</h2>
 
         <div class="form-grid">
-
-            <input type="number" id="employeeId" placeholder="Employee ID">
-
-            <input type="number" id="basicSalary" placeholder="Basic Salary">
-
-            <input type="number" id="allowances" placeholder="Allowances">
-
-            <input type="number" id="deductions" placeholder="Deductions">
-
+            <input type="number" id="employeeId" placeholder="Employee ID" min="1">
+            <input type="number" id="basicSalary" placeholder="Basic Salary" min="0" step="0.01">
+            <input type="number" id="allowances" placeholder="Allowances" min="0" step="0.01">
+            <input type="number" id="deductions" placeholder="Deductions" min="0" step="0.01">
         </div>
 
-        <button class="save-btn" onclick="saveSalary()">
-            Save Salary
-        </button>
-
-        <button class="clear-btn" onclick="clearForm()">
-            Clear
-        </button>
-
-        <div id="message"></div>
-
+        <button class="save-btn" id="saveButton" onclick="saveSalary()">Save Salary</button>
+        <button class="clear-btn" onclick="clearForm()">Clear</button>
+        <div id="message" role="status" aria-live="polite"></div>
     </div>
 
-
     <div class="table-card">
-
         <h2>Salary Details</h2>
-
         <table>
-
             <thead>
                 <tr>
                     <th>ID</th>
@@ -219,306 +204,230 @@
                     <th>Actions</th>
                 </tr>
             </thead>
-
-            <tbody id="salaryTable">
-            </tbody>
-
+            <tbody id="salaryTable"></tbody>
         </table>
-
     </div>
-
 </div>
 
-
 <script>
-
 let editId = null;
 
-const username = sessionStorage.getItem("username");
-const password = sessionStorage.getItem("password");
+const message = document.getElementById("message");
+const table = document.getElementById("salaryTable");
+const saveButton = document.getElementById("saveButton");
 
-if (!username || !password) {
-    window.location.href = "login.html";
+async function apiRequest(url, options = {}) {
+    const response = await fetch(url, {
+        ...options,
+        credentials: "same-origin",
+        headers: {
+            ...(options.headers || {})
+        }
+    });
+
+    if (response.status === 401 || response.status === 403) {
+        throw new Error(
+            response.status === 401
+                ? "Your login session has expired. Please log in again."
+                : "Access denied. Please log in with an admin account."
+        );
+    }
+
+    if (!response.ok) {
+        const details = await response.text();
+        throw new Error(details || "Request failed: " + response.status);
+    }
+
+    return response;
 }
 
-const auth = "Basic " + btoa(username + ":" + password);
+function showError(error, fallback) {
+    message.textContent = error.message || fallback;
 
+    if (error.message.includes("login session") ||
+        error.message.includes("Access denied")) {
+        setTimeout(() => {
+            window.location.replace("/login.html");
+        }, 1800);
+    }
+}
 
-function loadSalaries() {
+function formatMoney(value) {
+    return "₹" + Number(value || 0).toFixed(2);
+}
 
-    fetch("/api/salaries", {
-        method: "GET",
-        headers: {
-            "Authorization": auth
+async function loadSalaries() {
+    table.replaceChildren();
+    message.textContent = "Loading salaries...";
+
+    try {
+        const response = await apiRequest("/api/salaries");
+        const salaries = await response.json();
+
+        if (!Array.isArray(salaries) || salaries.length === 0) {
+            message.textContent = "No salary records found.";
+            return;
         }
-    })
-    .then(response => {
 
-        if (!response.ok) {
-            throw new Error("Failed to load salaries");
-        }
+        salaries.forEach(salary => {
+            const row = document.createElement("tr");
 
-        return response.json();
+            const values = [
+                salary.id,
+                salary.employeeId,
+                formatMoney(salary.basicSalary),
+                formatMoney(salary.allowances),
+                formatMoney(salary.deductions),
+                formatMoney(
+                    salary.netSalary ??
+                    (Number(salary.basicSalary || 0) +
+                     Number(salary.allowances || 0) -
+                     Number(salary.deductions || 0))
+                )
+            ];
 
-    })
-    .then(data => {
+            values.forEach((value, index) => {
+                const cell = document.createElement("td");
+                cell.textContent = value;
+                if (index === 5) {
+                    cell.className = "net";
+                }
+                row.appendChild(cell);
+            });
 
-        const table = document.getElementById("salaryTable");
+            const actions = document.createElement("td");
 
-        table.innerHTML = "";
+            const editButton = document.createElement("button");
+            editButton.className = "edit-btn";
+            editButton.textContent = "Edit";
+            editButton.onclick = () => editSalary(salary.id);
 
-        data.forEach(salary => {
+            const deleteButton = document.createElement("button");
+            deleteButton.className = "delete-btn";
+            deleteButton.textContent = "Delete";
+            deleteButton.onclick = () => deleteSalary(salary.id);
 
-            const row = `
-                <tr>
-
-                    <td>${salary.id}</td>
-
-                    <td>${salary.employeeId}</td>
-
-                    <td>₹${salary.basicSalary.toFixed(2)}</td>
-
-                    <td>₹${salary.allowances.toFixed(2)}</td>
-
-                    <td>₹${salary.deductions.toFixed(2)}</td>
-
-                    <td class="net">
-                        ₹${salary.netSalary.toFixed(2)}
-                    </td>
-
-                    <td>
-
-                        <button
-                            class="edit-btn"
-                            onclick="editSalary(${salary.id})">
-                            Edit
-                        </button>
-
-                        <button
-                            class="delete-btn"
-                            onclick="deleteSalary(${salary.id})">
-                            Delete
-                        </button>
-
-                    </td>
-
-                </tr>
-            `;
-
-            table.innerHTML += row;
-
+            actions.append(editButton, deleteButton);
+            row.appendChild(actions);
+            table.appendChild(row);
         });
 
-    })
-    .catch(error => {
-
-        document.getElementById("message").innerText =
-            error.message;
-
-    });
+        message.textContent = "";
+    } catch (error) {
+        showError(error, "Failed to load salaries.");
+    }
 }
 
+async function saveSalary() {
+    const employeeId = Number(document.getElementById("employeeId").value);
+    const basicSalary = Number(document.getElementById("basicSalary").value);
+    const allowances = Number(document.getElementById("allowances").value || 0);
+    const deductions = Number(document.getElementById("deductions").value || 0);
 
-function saveSalary() {
-
-    const employeeId =
-        document.getElementById("employeeId").value;
-
-    const basicSalary =
-        document.getElementById("basicSalary").value;
-
-    const allowances =
-        document.getElementById("allowances").value;
-
-    const deductions =
-        document.getElementById("deductions").value;
-
-
-    if (!employeeId || !basicSalary) {
-
-        document.getElementById("message").innerText =
-            "Please enter Employee ID and Basic Salary";
-
+    if (!employeeId || employeeId < 1 ||
+        document.getElementById("basicSalary").value === "" ||
+        basicSalary < 0 || allowances < 0 || deductions < 0) {
+        message.textContent = "Enter a valid Employee ID and salary amounts.";
         return;
     }
 
-
     const salary = {
-
-        employeeId: Number(employeeId),
-
-        basicSalary: Number(basicSalary),
-
-        allowances: Number(allowances || 0),
-
-        deductions: Number(deductions || 0)
-
+        employeeId,
+        basicSalary,
+        allowances,
+        deductions
     };
 
+    const isEditing = editId !== null;
+    const url = isEditing
+        ? "/api/salaries/" + editId
+        : "/api/salaries";
 
-    let url = "/api/salaries";
+    saveButton.disabled = true;
+    message.textContent = "Saving salary...";
 
-    let method = "POST";
-
-
-    if (editId !== null) {
-
-        url = "/api/salaries/" + editId;
-
-        method = "PUT";
-
-    }
-
-
-    fetch(url, {
-
-        method: method,
-
-        headers: {
-
-            "Authorization": auth,
-
-            "Content-Type": "application/json"
-
-        },
-
-        body: JSON.stringify(salary)
-
-    })
-
-    .then(response => {
-
-        if (!response.ok) {
-
-            throw new Error("Failed to save salary");
-
-        }
-
-        return response.json();
-
-    })
-
-    .then(data => {
-
-        document.getElementById("message").innerText =
-            "Salary saved successfully";
-
-        clearForm();
-
-        loadSalaries();
-
-    })
-
-    .catch(error => {
-
-        document.getElementById("message").innerText =
-            error.message;
-
-    });
-}
-
-
-function editSalary(id) {
-
-    fetch("/api/salaries/" + id, {
-
-        method: "GET",
-
-        headers: {
-
-            "Authorization": auth
-
-        }
-
-    })
-
-    .then(response => response.json())
-
-    .then(salary => {
-
-        editId = salary.id;
-
-        document.getElementById("employeeId").value =
-            salary.employeeId;
-
-        document.getElementById("basicSalary").value =
-            salary.basicSalary;
-
-        document.getElementById("allowances").value =
-            salary.allowances;
-
-        document.getElementById("deductions").value =
-            salary.deductions;
-
-        document.getElementById("formTitle").innerText =
-            "Update Salary";
-
-        window.scrollTo({
-            top: 0,
-            behavior: "smooth"
+    try {
+        await apiRequest(url, {
+            method: isEditing ? "PUT" : "POST",
+            headers: {
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify(salary)
         });
 
-    });
+        clearForm();
+        message.textContent = isEditing
+            ? "Salary updated successfully."
+            : "Salary saved successfully.";
+
+        await loadSalaries();
+    } catch (error) {
+        showError(error, "Failed to save salary.");
+    } finally {
+        saveButton.disabled = false;
+    }
 }
 
+async function editSalary(id) {
+    try {
+        const response = await apiRequest("/api/salaries/" + id);
+        const salary = await response.json();
 
-function deleteSalary(id) {
+        editId = salary.id;
+        document.getElementById("employeeId").value = salary.employeeId ?? "";
+        document.getElementById("basicSalary").value = salary.basicSalary ?? "";
+        document.getElementById("allowances").value = salary.allowances ?? 0;
+        document.getElementById("deductions").value = salary.deductions ?? 0;
+        document.getElementById("formTitle").textContent = "Update Salary";
+        saveButton.textContent = "Update Salary";
 
+        message.textContent = "Editing salary record " + id;
+        window.scrollTo({ top: 0, behavior: "smooth" });
+    } catch (error) {
+        showError(error, "Unable to load salary details.");
+    }
+}
+
+async function deleteSalary(id) {
     if (!confirm("Are you sure you want to delete this salary?")) {
         return;
     }
 
+    try {
+        await apiRequest("/api/salaries/" + id, {
+            method: "DELETE"
+        });
 
-    fetch("/api/salaries/" + id, {
-
-        method: "DELETE",
-
-        headers: {
-
-            "Authorization": auth
-
-        }
-
-    })
-
-    .then(response => response.text())
-
-    .then(data => {
-
-        document.getElementById("message").innerText = data;
-
-        loadSalaries();
-
-    })
-
-    .catch(error => {
-
-        document.getElementById("message").innerText =
-            "Failed to delete salary";
-
-    });
+        clearForm();
+        message.textContent = "Salary deleted successfully.";
+        await loadSalaries();
+    } catch (error) {
+        showError(error, "Failed to delete salary.");
+    }
 }
-
 
 function clearForm() {
-
     editId = null;
-
     document.getElementById("employeeId").value = "";
-
     document.getElementById("basicSalary").value = "";
-
     document.getElementById("allowances").value = "";
-
     document.getElementById("deductions").value = "";
-
-    document.getElementById("formTitle").innerText =
-        "Add Salary";
+    document.getElementById("formTitle").textContent = "Add Salary";
+    saveButton.textContent = "Save Salary";
 }
 
+async function logout() {
+    try {
+        await fetch("/api/auth/logout", {
+            method: "POST",
+            credentials: "same-origin"
+        });
+    } finally {
+        window.location.replace("/login.html");
+    }
+}
 
 loadSalaries();
-
 </script>
 
 </body>
