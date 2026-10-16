@@ -1,366 +1,76 @@
-
 import { useEffect, useState } from "react";
-import {
-  BrowserRouter,
-  Routes,
-  Route,
-  Link,
-  Navigate,
-  useNavigate
-} from "react-router-dom";
 import "./App.css";
 
-const API = "/api/employees";
+const API_BASE_URL =
+  import.meta.env.VITE_API_BASE_URL ||
+  "https://employeehub-vubc.onrender.com";
 
-function Layout({ children }) {
-  return (
-    <div className="app-layout">
-      <aside className="sidebar">
-        <h2>EmployeeHub</h2>
-        <p className="sidebar-subtitle">Management System</p>
-        <nav>
-          <Link to="/">Dashboard</Link>
-          <Link to="/employees">Employees</Link>
-          <Link to="/departments">Departments</Link>
-          <Link to="/salary">Salary</Link>
-          <Link to="/login">Login</Link>
-        </nav>
-      </aside>
-      <main className="main-content">{children}</main>
-    </div>
-  );
-}
-
-function Dashboard() {
-  return (
-    <Layout>
-      <header className="page-header">
-        <h1>Dashboard</h1>
-        <p>Welcome to EmployeeHub</p>
-      </header>
-      <div className="dashboard-grid">
-        <Link className="dashboard-card" to="/employees">
-          <h3>Employee Management</h3>
-          <p>Add, view, update and delete employees.</p>
-        </Link>
-        <Link className="dashboard-card" to="/departments">
-          <h3>Department Management</h3>
-          <p>Manage company departments.</p>
-        </Link>
-        <Link className="dashboard-card" to="/salary">
-          <h3>Salary Management</h3>
-          <p>View and manage salary details.</p>
-        </Link>
-      </div>
-    </Layout>
-  );
-}
-
-function Employees() {
-  const [employees, setEmployees] = useState([]);
-  const [form, setForm] = useState({
-    name: "",
-    email: "",
-    phone: "",
-    designation: ""
+async function apiRequest(path, options = {}) {
+  const response = await fetch(`${API_BASE_URL}${path}`, {
+    ...options,
+    credentials: "include",
+    headers: {
+      ...(options.body ? { "Content-Type": "application/json" } : {}),
+      ...options.headers,
+    },
   });
-  const [editingId, setEditingId] = useState(null);
-  const [error, setError] = useState("");
-  const [message, setMessage] = useState("");
-  const [loading, setLoading] = useState(false);
 
-  async function loadEmployees() {
-    setLoading(true);
-    setError("");
-
-    try {
-      const response = await fetch(API, {
-        credentials: "include"
-      });
-
-      if (response.status === 401 || response.status === 403) {
-        setError("Access denied. Please log in using your ADMIN account.");
-        setEmployees([]);
-        return;
-      }
-
-      if (!response.ok) {
-        throw new Error("Unable to load employees.");
-      }
-
-      const data = await response.json();
-      setEmployees(data);
-    } catch {
-      setError("Cannot connect to the backend. Check that Spring Boot is running.");
-    } finally {
-      setLoading(false);
-    }
+  if (!response.ok) {
+    const message = await response.text();
+    throw new Error(message || `HTTP ${response.status}`);
   }
 
-  useEffect(() => {
-    loadEmployees();
-  }, []);
+  if (response.status === 204) return null;
 
-  function handleChange(event) {
-    setForm({
-      ...form,
-      [event.target.name]: event.target.value
-    });
+  const text = await response.text();
+  if (!text) return null;
+
+  try {
+    return JSON.parse(text);
+  } catch {
+    return text;
   }
-
-  async function handleSubmit(event) {
-    event.preventDefault();
-    setError("");
-    setMessage("");
-
-    const url = editingId === null ? API : `${API}/${editingId}`;
-    const method = editingId === null ? "POST" : "PUT";
-
-    try {
-      const response = await fetch(url, {
-        method,
-        credentials: "include",
-        headers: {
-          "Content-Type": "application/json"
-        },
-        body: JSON.stringify(form)
-      });
-
-      if (response.status === 401 || response.status === 403) {
-        throw new Error("Access denied. Log in using an ADMIN account.");
-      }
-
-      if (!response.ok) {
-        const details = await response.text();
-        throw new Error(details || "Unable to save employee.");
-      }
-
-      setMessage(editingId === null
-        ? "Employee added successfully."
-        : "Employee updated successfully.");
-
-      setForm({
-        name: "",
-        email: "",
-        phone: "",
-        designation: ""
-      });
-      setEditingId(null);
-      await loadEmployees();
-    } catch (err) {
-      setError(err.message || "Unable to save employee.");
-    }
-  }
-
-  function handleEdit(employee) {
-    setEditingId(employee.id);
-    setForm({
-      name: employee.name || "",
-      email: employee.email || "",
-      phone: employee.phone || "",
-      designation: employee.designation || ""
-    });
-    setMessage("");
-    setError("");
-    window.scrollTo({ top: 0, behavior: "smooth" });
-  }
-
-  async function handleDelete(id) {
-    if (!window.confirm("Are you sure you want to delete this employee?")) {
-      return;
-    }
-
-    setError("");
-    setMessage("");
-
-    try {
-      const response = await fetch(`${API}/${id}`, {
-        method: "DELETE",
-        credentials: "include"
-      });
-
-      if (response.status === 401 || response.status === 403) {
-        throw new Error("Access denied. Log in using an ADMIN account.");
-      }
-
-      if (!response.ok) {
-        throw new Error("Unable to delete employee.");
-      }
-
-      setMessage("Employee deleted successfully.");
-      await loadEmployees();
-    } catch (err) {
-      setError(err.message || "Unable to delete employee.");
-    }
-  }
-
-  function cancelEdit() {
-    setEditingId(null);
-    setForm({
-      name: "",
-      email: "",
-      phone: "",
-      designation: ""
-    });
-    setError("");
-    setMessage("");
-  }
-
-  return (
-    <Layout>
-      <header className="page-header">
-        <h1>Employee Management</h1>
-        <p>Add and manage employee information</p>
-      </header>
-
-      <section className="panel">
-        <h2>{editingId === null ? "Add Employee" : "Update Employee"}</h2>
-
-        <form className="employee-form" onSubmit={handleSubmit}>
-          <input
-            name="name"
-            placeholder="Employee Name"
-            value={form.name}
-            onChange={handleChange}
-            required
-          />
-          <input
-            name="email"
-            type="email"
-            placeholder="Email Address"
-            value={form.email}
-            onChange={handleChange}
-            required
-          />
-          <input
-            name="phone"
-            placeholder="Phone Number"
-            value={form.phone}
-            onChange={handleChange}
-            required
-          />
-          <input
-            name="designation"
-            placeholder="Designation"
-            value={form.designation}
-            onChange={handleChange}
-            required
-          />
-
-          <div className="form-actions">
-            <button type="submit">
-              {editingId === null ? "Add Employee" : "Update Employee"}
-            </button>
-
-            {editingId !== null && (
-              <button type="button" className="secondary-button" onClick={cancelEdit}>
-                Cancel
-              </button>
-            )}
-          </div>
-        </form>
-      </section>
-
-      {error && <p className="error-message">{error}</p>}
-      {message && <p className="success-message">{message}</p>}
-
-      <section className="panel">
-        <h2>Employee List</h2>
-
-        {loading ? (
-          <p>Loading employees...</p>
-        ) : employees.length === 0 ? (
-          <p>No employees found.</p>
-        ) : (
-          <div className="table-wrapper">
-            <table>
-              <thead>
-                <tr>
-                  <th>ID</th>
-                  <th>Name</th>
-                  <th>Email</th>
-                  <th>Phone</th>
-                  <th>Designation</th>
-                  <th>Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {employees.map((employee) => (
-                  <tr key={employee.id}>
-                    <td>{employee.id}</td>
-                    <td>{employee.name}</td>
-                    <td>{employee.email}</td>
-                    <td>{employee.phone}</td>
-                    <td>{employee.designation}</td>
-                    <td className="action-buttons">
-                      <button type="button" onClick={() => handleEdit(employee)}>
-                        Edit
-                      </button>
-                      <button
-                        type="button"
-                        className="delete-button"
-                        onClick={() => handleDelete(employee.id)}
-                      >
-                        Delete
-                      </button>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
-      </section>
-    </Layout>
-  );
 }
 
-function Login() {
+function Login({ onLogin }) {
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
-  const navigate = useNavigate();
 
-  async function handleLogin(event) {
+  async function handleSubmit(event) {
     event.preventDefault();
     setError("");
     setLoading(true);
 
     try {
-      const response = await fetch("/api/auth/login", {
+      await apiRequest("/api/auth/login", {
         method: "POST",
-        credentials: "include",
-        headers: {
-          "Content-Type": "application/json"
-        },
-        body: JSON.stringify({ username, password })
+        body: JSON.stringify({ username, password }),
       });
-
-      if (!response.ok) {
-        throw new Error("Login failed. Check your username, password and ADMIN role.");
-      }
-
-      navigate("/employees");
-    } catch (err) {
-      setError(err.message || "Cannot connect to the backend.");
+      onLogin(username);
+    } catch (error) {
+      setError(
+        "Login failed. Check your credentials, login endpoint, and backend connection."
+      );
     } finally {
       setLoading(false);
     }
   }
 
   return (
-    <div className="login-container">
-      <form className="panel login-panel" onSubmit={handleLogin}>
+    <div className="login-page">
+      <form className="login-card" onSubmit={handleSubmit}>
         <h1>EmployeeHub</h1>
-        <p>Admin Login</p>
+        <p>Employee Management System</p>
+
+        {error && <p className="error-message">{error}</p>}
 
         <label htmlFor="username">Username</label>
         <input
           id="username"
           value={username}
           onChange={(event) => setUsername(event.target.value)}
-          placeholder="Enter username"
           autoComplete="username"
           required
         />
@@ -371,58 +81,360 @@ function Login() {
           type="password"
           value={password}
           onChange={(event) => setPassword(event.target.value)}
-          placeholder="Enter password"
           autoComplete="current-password"
           required
         />
 
-        {error && <p className="error-message">{error}</p>}
-
         <button type="submit" disabled={loading}>
-          {loading ? "Logging in..." : "Log In"}
+          {loading ? "Logging in..." : "Login"}
         </button>
-
-        <Link className="back-link" to="/">
-          Back to Dashboard
-        </Link>
       </form>
     </div>
   );
 }
 
-function ComingSoon({ title }) {
+function Dashboard({ setPage }) {
   return (
-    <Layout>
-      <header className="page-header">
-        <h1>{title}</h1>
-        <p>This section is ready for further development.</p>
-      </header>
-      <section className="panel">
-        <p>The {title.toLowerCase()} page is not connected to its backend yet.</p>
-      </section>
-    </Layout>
+    <section>
+      <h1>Dashboard</h1>
+      <p>Welcome to EmployeeHub Management System.</p>
+
+      <div className="dashboard-cards">
+        <button onClick={() => setPage("employees")} className="dashboard-card">
+          <h2>Employees</h2>
+          <p>Manage employee information</p>
+        </button>
+
+        <button onClick={() => setPage("departments")} className="dashboard-card">
+          <h2>Departments</h2>
+          <p>View departments</p>
+        </button>
+
+        <button onClick={() => setPage("salary")} className="dashboard-card">
+          <h2>Salary</h2>
+          <p>View salary records</p>
+        </button>
+      </div>
+    </section>
   );
 }
 
-function App() {
+function Employees() {
+  const emptyForm = {
+    name: "",
+    email: "",
+    phone: "",
+    designation: "",
+  };
+
+  const [employees, setEmployees] = useState([]);
+  const [form, setForm] = useState(emptyForm);
+  const [editingId, setEditingId] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState("");
+  const [notice, setNotice] = useState("");
+
+  async function loadEmployees() {
+    setLoading(true);
+    setError("");
+
+    try {
+      const data = await apiRequest("/api/employees");
+      setEmployees(Array.isArray(data) ? data : []);
+    } catch (error) {
+      setError(
+        "Cannot load employees. Check backend availability, CORS, and ADMIN login."
+      );
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  useEffect(() => {
+    loadEmployees();
+  }, []);
+
+  function updateField(event) {
+    setForm((current) => ({
+      ...current,
+      [event.target.name]: event.target.value,
+    }));
+  }
+
+  function editEmployee(employee) {
+    setEditingId(employee.id);
+    setForm({
+      name: employee.name || "",
+      email: employee.email || "",
+      phone: employee.phone || "",
+      designation: employee.designation || "",
+    });
+    setError("");
+    setNotice("");
+  }
+
+  function cancelEdit() {
+    setEditingId(null);
+    setForm(emptyForm);
+  }
+
+  async function handleSubmit(event) {
+    event.preventDefault();
+    setSaving(true);
+    setError("");
+    setNotice("");
+
+    try {
+      const editing = editingId !== null;
+
+      await apiRequest(
+        editing ? `/api/employees/${editingId}` : "/api/employees",
+        {
+          method: editing ? "PUT" : "POST",
+          body: JSON.stringify(form),
+        }
+      );
+
+      setNotice(
+        editing
+          ? "Employee updated successfully."
+          : "Employee added successfully."
+      );
+
+      cancelEdit();
+      await loadEmployees();
+    } catch (error) {
+      setError(`Unable to save employee: ${error.message}`);
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function deleteEmployee(id) {
+    if (!window.confirm("Delete this employee?")) return;
+
+    setError("");
+    setNotice("");
+
+    try {
+      await apiRequest(`/api/employees/${id}`, { method: "DELETE" });
+      setNotice("Employee deleted successfully.");
+      await loadEmployees();
+    } catch (error) {
+      setError(`Unable to delete employee: ${error.message}`);
+    }
+  }
+
   return (
-    <BrowserRouter>
-      <Routes>
-        <Route path="/" element={<Dashboard />} />
-        <Route path="/login" element={<Login />} />
-        <Route path="/employees" element={<Employees />} />
-        <Route
-          path="/departments"
-          element={<ComingSoon title="Department Management" />}
+    <section>
+      <h1>Employee Management</h1>
+      <p>Add and manage employee information.</p>
+
+      {error && <p className="error-message">{error}</p>}
+      {notice && <p className="success-message">{notice}</p>}
+
+      <form className="employee-form" onSubmit={handleSubmit}>
+        <h2>{editingId !== null ? "Edit Employee" : "Add Employee"}</h2>
+
+        <input
+          name="name"
+          placeholder="Full name"
+          value={form.name}
+          onChange={updateField}
+          required
         />
-        <Route
-          path="/salary"
-          element={<ComingSoon title="Salary Management" />}
+
+        <input
+          name="email"
+          type="email"
+          placeholder="Email"
+          value={form.email}
+          onChange={updateField}
+          required
         />
-        <Route path="*" element={<Navigate to="/" replace />} />
-      </Routes>
-    </BrowserRouter>
+
+        <input
+          name="phone"
+          placeholder="Phone"
+          value={form.phone}
+          onChange={updateField}
+        />
+
+        <input
+          name="designation"
+          placeholder="Designation"
+          value={form.designation}
+          onChange={updateField}
+        />
+
+        <button type="submit" disabled={saving}>
+          {saving
+            ? "Saving..."
+            : editingId !== null
+              ? "Update Employee"
+              : "Add Employee"}
+        </button>
+
+        {editingId !== null && (
+          <button
+            type="button"
+            className="secondary-button"
+            onClick={cancelEdit}
+          >
+            Cancel
+          </button>
+        )}
+      </form>
+
+      <h2>Employee List</h2>
+
+      {loading ? (
+        <p>Loading employees...</p>
+      ) : employees.length === 0 ? (
+        <p>No employees found.</p>
+      ) : (
+        <div className="table-container">
+          <table>
+            <thead>
+              <tr>
+                <th>ID</th>
+                <th>Name</th>
+                <th>Email</th>
+                <th>Phone</th>
+                <th>Designation</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {employees.map((employee) => (
+                <tr key={employee.id}>
+                  <td>{employee.id}</td>
+                  <td>{employee.name}</td>
+                  <td>{employee.email}</td>
+                  <td>{employee.phone || "-"}</td>
+                  <td>{employee.designation || "-"}</td>
+                  <td>
+                    <button onClick={() => editEmployee(employee)}>
+                      Edit
+                    </button>
+                    <button
+                      className="delete-button"
+                      onClick={() => deleteEmployee(employee.id)}
+                    >
+                      Delete
+                    </button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </section>
   );
 }
 
-export default App;
+function DataTable({ title, endpoint }) {
+  const [items, setItems] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+
+  useEffect(() => {
+    apiRequest(endpoint)
+      .then((data) => setItems(Array.isArray(data) ? data : []))
+      .catch((error) => setError(error.message))
+      .finally(() => setLoading(false));
+  }, [endpoint]);
+
+  return (
+    <section>
+      <h1>{title}</h1>
+
+      {error && <p className="error-message">Unable to load records: {error}</p>}
+      {loading ? (
+        <p>Loading...</p>
+      ) : items.length === 0 ? (
+        <p>No records found.</p>
+      ) : (
+        <div className="table-container">
+          <table>
+            <thead>
+              <tr>
+                {Object.keys(items[0]).map((key) => (
+                  <th key={key}>{key}</th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {items.map((item, index) => (
+                <tr key={item.id ?? index}>
+                  {Object.keys(items[0]).map((key) => (
+                    <td key={key}>{String(item[key] ?? "")}</td>
+                  ))}
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </section>
+  );
+}
+
+export default function App() {
+  const [page, setPage] = useState("dashboard");
+  const [username, setUsername] = useState("");
+  const [loggedIn, setLoggedIn] = useState(false);
+
+  async function logout() {
+    try {
+      await apiRequest("/api/auth/logout", { method: "POST" });
+    } catch (error) {
+      console.error("Logout request failed:", error);
+    }
+
+    setLoggedIn(false);
+    setUsername("");
+    setPage("dashboard");
+  }
+
+  if (!loggedIn) {
+    return (
+      <Login
+        onLogin={(name) => {
+          setUsername(name);
+          setLoggedIn(true);
+          setPage("dashboard");
+        }}
+      />
+    );
+  }
+
+  return (
+    <div className="app-layout">
+      <aside className="sidebar">
+        <h2>EmployeeHub</h2>
+        <p>Management System</p>
+        <p>Welcome, {username}</p>
+
+        <button onClick={() => setPage("dashboard")}>Dashboard</button>
+        <button onClick={() => setPage("employees")}>Employees</button>
+        <button onClick={() => setPage("departments")}>Departments</button>
+        <button onClick={() => setPage("salary")}>Salary</button>
+        <button className="logout-button" onClick={logout}>Logout</button>
+      </aside>
+
+      <main className="main-content">
+        {page === "dashboard" && <Dashboard setPage={setPage} />}
+        {page === "employees" && <Employees />}
+        {page === "departments" && (
+          <DataTable title="Departments" endpoint="/api/departments" />
+        )}
+        {page === "salary" && (
+          <DataTable title="Salary Management" endpoint="/api/salaries" />
+        )}
+      </main>
+    </div>
+  );
+}
