@@ -1,0 +1,12 @@
+
+body {
+  margin: 0;
+  font-family: Arial, Helvetica, sans-serif;
+  color: #1e293b;
+  background: #f4f7fb;
+}
+
+button,
+input {
+  font-family: inherit;
+}
